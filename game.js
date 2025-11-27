@@ -295,6 +295,9 @@ function updateObstacles(deltaTime) {
     const pBoxW = player.width * player.hitboxWidthScale;
     const pBoxH = player.height * player.hitboxHeightScale;
 
+    // FIX: Re-introduced signal for safer state transition
+    let levelCompleteSignal = false; 
+
 
     for (let i = 0; i < levelObstacles.length; i++) {
         const obs = levelObstacles[i];
@@ -311,16 +314,18 @@ function updateObstacles(deltaTime) {
             return; // Exit updateObstacles immediately on death
         }
 
-        // FIX: Check for level completion and transition immediately
+        // Check for level completion (Set signal if last obstacle has passed)
         if (gameState === 'LEVEL' && obs.x < -obs.width && i === levelObstacles.length - 1) {
-            gameState = 'LEVEL_COMPLETE'; 
-            resetPlayerAndObstacles();
-            currentLevel++;
-            return; // Exit updateObstacles immediately on level completion
+            levelCompleteSignal = true; 
         }
     }
     
-    // Removed the previous levelCompleteSignal logic here
+    // FIX: Handle the state transition AFTER the loop has completed
+    if (levelCompleteSignal) {
+        gameState = 'LEVEL_COMPLETE'; 
+        resetPlayerAndObstacles();
+        currentLevel++;
+    }
 }
 
 /**
