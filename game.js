@@ -25,10 +25,15 @@ const player = {
     width: 0, // Set dynamically in resizeCanvas()
     height: 0, // Set dynamically in resizeCanvas()
     velocityY: 0,
-    // NEW: Increased gravity and jump strength for better scaling
     gravity: 1.5,
     jumpStrength: -28, 
-    isGrounded: true
+    isGrounded: true,
+    
+    // NEW: Hitbox Adjustments to fit the visual sprite better
+    hitboxOffsetX: 0.1,      // Start hitbox 10% from the left of the sprite
+    hitboxOffsetY: 0.2,      // Start hitbox 20% from the top of the sprite
+    hitboxWidthScale: 0.8,   // Hitbox is 80% of the sprite width
+    hitboxHeightScale: 0.7   // Hitbox is 70% of the sprite height
 };
 
 // Define menu buttons, positions are dynamically calculated in updateMenuButtonPositions()
@@ -44,7 +49,7 @@ function resizeCanvas() {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     
-    // NEW: Set player size relative to canvas height (e.g., 8% of height)
+    // Set player size relative to canvas height (e.g., 8% of height)
     player.height = canvas.height * 0.08; 
     player.width = player.height; // Keep it square
 
@@ -79,7 +84,7 @@ function updateMenuButtonPositions() {
     menuButtons.gameOverMenu = { x: W / 2 - btnWidth - margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Return to Menu' };
     menuButtons.gameOverRetry = { x: W / 2 + margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Retry Level' };
     
-    // Level Complete Buttons (Added back the level complete buttons)
+    // Level Complete Buttons
     menuButtons.levelCompleteMenu = { x: W / 2 - btnWidth - margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Return to Menu' };
     menuButtons.levelCompleteLevels = { x: W / 2 + margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Select Level' };
 
@@ -245,12 +250,11 @@ function generateObstacles(isInfinite) {
     let currentX = canvas.width * 0.6; // Start further right
     let totalLength = 0;
     
-    // NEW: Define obstacle heights relative to the responsive player size
-    const baseObstacleHeight = player.height * 0.75; // Base obstacle is 75% of player height
-    const tallObstacleHeight = player.height * 1.5;  // Tall obstacle is 150% of player height
-    const maxObstacleWidth = player.width * 1.5;     // Max width is 150% of player width
-    const minGap = player.width * 3;                 // Min gap is 3x player width
-
+    // Define obstacle heights relative to the responsive player size
+    const baseObstacleHeight = player.height * 0.75; 
+    const tallObstacleHeight = player.height * 1.5;  
+    const maxObstacleWidth = player.width * 1.5;     
+    const minGap = player.width * 3;                 
 
     // Generate until the total distance is reached
     while (totalLength < maxDistance) {
@@ -284,19 +288,26 @@ function updateObstacles(deltaTime) {
     const speedIncrease = gameState === 'INFINITE' ? Math.floor(score / 100) * 5 : 0;
     const scrollSpeed = baseSpeed + speedIncrease; 
     const distanceToScroll = scrollSpeed * deltaTime;
-
+    
     let levelCompleteSignal = false;
+    
+    // NEW: Calculate the player's true collision box coordinates
+    const pBoxX = player.x + player.width * player.hitboxOffsetX;
+    const pBoxY = player.y + player.height * player.hitboxOffsetY;
+    const pBoxW = player.width * player.hitboxWidthScale;
+    const pBoxH = player.height * player.hitboxHeightScale;
+
 
     for (let i = 0; i < levelObstacles.length; i++) {
         const obs = levelObstacles[i];
         obs.x -= distanceToScroll;
 
-        // Check for collision with player (AABB collision)
+        // Check for collision with player (AABB collision using adjusted hitbox)
         if (
-            player.x < obs.x + obs.width &&
-            player.x + player.width > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + player.height > obs.y
+            pBoxX < obs.x + obs.width &&
+            pBoxX + pBoxW > obs.x &&
+            pBoxY < obs.y + obs.height &&
+            pBoxY + pBoxH > obs.y
         ) {
             resetGame(); // Triggers GAME_OVER state
             return;
@@ -342,6 +353,19 @@ function updateGame(deltaTime) {
 function drawGame() {
     drawPlayer();
     drawObstacles();
+    
+    // --- TEMPORARY DEBUG DRAWING ---
+    // Uncomment this section to see the actual hitbox being used for collision
+    /*
+    ctx.strokeStyle = '#00FFFF'; // Cyan color for visibility
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+        player.x + player.width * player.hitboxOffsetX,
+        player.y + player.height * player.hitboxOffsetY,
+        player.width * player.hitboxWidthScale,
+        player.height * player.hitboxHeightScale
+    );
+    */
 }
 
 /**
