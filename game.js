@@ -12,7 +12,6 @@ let score = 0;
 let lastTime = 0;
 let levelObstacles = [];
 
-// Ground height (responsive)
 let groundHeight = 10;
 
 // --- PLAYER SPRITE SETUP ---
@@ -26,8 +25,8 @@ const player = {
     width: 0,
     height: 0,
     velocityY: 0,
-    gravity: 1,
-    jumpStrength: -20,
+    gravity: 0,
+    jumpStrength: 0,
     isGrounded: true,
 
     hitboxOffsetX: 0.12,
@@ -35,42 +34,41 @@ const player = {
     hitboxWidthScale: 0.76,
     hitboxHeightScale: 0.68,
 
-    terminalVelocity: 2000
+    terminalVelocity: 0
 };
 
 const menuButtons = {};
 
-
 // *****************************************************************************************
-//  RESIZE CANVAS + RESPONSIVE SCALING
+// RESIZING + RESPONSIVE SCALING
 // *****************************************************************************************
 
 function resizeCanvas() {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
-    // Floor height
     groundHeight = Math.max(18, canvas.height * 0.06);
 
-    // Player size (~15% of screen height)
     player.height = canvas.height * 0.15;
     player.width = player.height;
 
-    // --- FINAL STABLE PHYSICS (DOES NOT SCALE WITH PLAYER SIZE) ---
-    player.gravity = canvas.height * 0.0035;       // controlled downward force
-    player.jumpStrength = -(canvas.height * 0.06); // guarantees no off-screen jump
-    player.terminalVelocity = canvas.height * 2.5; // safe cap
+    // ------------------------------------------------------------
+    // GEOMETRY DASH ACCURATE PHYSICS (Option A)
+    // tuned for 2304 x 1536 (canvas height = ~1536)
+    // ------------------------------------------------------------
+    player.gravity = canvas.height * 0.012;         // strong GD-like gravity
+    player.jumpStrength = -(canvas.height * 0.022); // tight GD arc
+    player.terminalVelocity = canvas.height * 4;    // fast GD fall
 
-    // Reset position
+    // Reset location
     player.x = canvas.width * 0.05;
     player.y = canvas.height - groundHeight - player.height;
 
     updateMenuButtonPositions();
 }
 
-
 // *****************************************************************************************
-//  UI BUTTON POSITIONING
+// UI POSITIONING
 // *****************************************************************************************
 
 function updateMenuButtonPositions() {
@@ -85,6 +83,7 @@ function updateMenuButtonPositions() {
 
     menuButtons.gameOverMenu = { x: W/2 - bw - margin/2, y: by, width:bw, height:bh, text:'Return to Menu' };
     menuButtons.gameOverRetry = { x: W/2 + margin/2, y: by, width:bw, height:bh, text:'Retry Level' };
+
     menuButtons.levelCompleteMenu = { x: W/2 - bw - margin/2, y: by, width:bw, height:bh, text:'Return to Menu' };
     menuButtons.levelCompleteLevels = { x: W/2 + margin/2, y: by, width:bw, height:bh, text:'Select Level' };
 
@@ -93,15 +92,18 @@ function updateMenuButtonPositions() {
     for (let i = 1; i <= 50; i++) {
         const col = (i-1) % cols;
         const row = Math.floor((i-1)/cols);
-        const x = startX + col*(btnW+pad);
-        const y = startY + row*(btnH+pad);
-        menuButtons['level_'+i] = { x, y, width:btnW, height:btnH, text:String(i) };
+        menuButtons['level_'+i] = {
+            x: startX + col*(btnW+pad),
+            y: startY + row*(btnH+pad),
+            width: btnW,
+            height: btnH,
+            text: String(i)
+        };
     }
 }
 
-
 // *****************************************************************************************
-//  INIT
+// INIT
 // *****************************************************************************************
 
 function init() {
@@ -116,9 +118,8 @@ function init() {
 
 playerImg.onload = init;
 
-
 // *****************************************************************************************
-//  GAME LOOP
+// GAME LOOP
 // *****************************************************************************************
 
 function gameLoop(timestamp) {
@@ -138,6 +139,7 @@ function gameLoop(timestamp) {
     switch (gameState) {
         case 'MENU': drawMenu(); break;
         case 'LEVEL_SELECT': drawLevelSelect(); break;
+
         case 'LEVEL':
         case 'INFINITE':
             updateGame(delta);
@@ -145,6 +147,7 @@ function gameLoop(timestamp) {
             if (gameState === 'LEVEL') drawLevelIndicator();
             else { updateScore(delta); drawScore(); }
             break;
+
         case 'GAME_OVER': drawGame(); drawGameOverScreen(); break;
         case 'LEVEL_COMPLETE': drawGame(); drawLevelCompleteScreen(); break;
     }
@@ -152,9 +155,8 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
-
 // *****************************************************************************************
-//  PLAYER PHYSICS
+// PLAYER PHYSICS — GEOMETRY DASH STYLE
 // *****************************************************************************************
 
 function resetPlayerAndObstacles() {
@@ -166,11 +168,9 @@ function resetPlayerAndObstacles() {
 }
 
 function updatePlayer() {
-
     if (!player.isGrounded) {
         player.velocityY += player.gravity;
 
-        // Terminal velocity clamp
         if (player.velocityY > player.terminalVelocity)
             player.velocityY = player.terminalVelocity;
 
@@ -184,9 +184,9 @@ function updatePlayer() {
         player.isGrounded = true;
     }
 
-    // Ceiling clamp
-    if (player.y < 0) {
-        player.y = 0;
+    // Ceiling clamp (never leave view)
+    if (player.y < canvas.height * 0.05) {
+        player.y = canvas.height * 0.05;
         if (player.velocityY < 0) player.velocityY = 0;
     }
 }
@@ -202,15 +202,15 @@ function drawPlayer() {
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 }
 
-
 // *****************************************************************************************
-//  OBSTACLES
+// OBSTACLES
 // *****************************************************************************************
 
 function generateObstacles(isInfinite) {
     levelObstacles = [];
     let difficulty = isInfinite ? 1 + Math.floor(score/500)*0.2 : 1 + (currentLevel-1)*0.15;
     let maxDist = isInfinite ? 999999999 : 800 + currentLevel*100;
+
     let x = canvas.width * 0.6;
     let total = 0;
 
@@ -239,8 +239,12 @@ function generateObstacles(isInfinite) {
 }
 
 function updateObstacles(delta) {
-    const baseSpeed = gameState === 'LEVEL' ? 250 : 300;
+    // ------------------------------------------------------------
+    // GEOMETRY DASH FORWARD SPEED (Option A)
+    // ------------------------------------------------------------
+    const baseSpeed = gameState === 'LEVEL' ? 575 : 600;
     const speedUp = (gameState === 'INFINITE') ? Math.floor(score/100)*5 : 0;
+
     const scroll = baseSpeed + speedUp;
     const dx = scroll * delta;
 
@@ -255,7 +259,12 @@ function updateObstacles(delta) {
         const o = levelObstacles[i];
         o.x -= dx;
 
-        if (pX < o.x+o.width && pX+pW > o.x && pY < o.y+o.height && pY+pH > o.y) {
+        if (
+            pX < o.x+o.width &&
+            pX+pW > o.x &&
+            pY < o.y+o.height &&
+            pY+pH > o.y
+        ) {
             resetGame();
             return;
         }
@@ -276,18 +285,22 @@ function drawObstacles() {
     levelObstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
 }
 
+// *****************************************************************************************
+// GAME UPDATE + RENDER
+// *****************************************************************************************
+
+function updateGame(delta) {
+    updatePlayer();
+    updateObstacles(delta);
+}
+
+function drawGame() {
+    drawPlayer();
+    drawObstacles();
+}
 
 // *****************************************************************************************
-//  GAME UPDATE + RENDER
-// *****************************************************************************************
-
-function updateGame(delta) { updatePlayer(); updateObstacles(delta); }
-
-function drawGame() { drawPlayer(); drawObstacles(); }
-
-
-// *****************************************************************************************
-//  GAME OVER
+// STATE HANDLING
 // *****************************************************************************************
 
 function resetGame() {
@@ -297,9 +310,8 @@ function resetGame() {
     gameState = 'GAME_OVER';
 }
 
-
 // *****************************************************************************************
-//  UI SCREENS
+// UI SCREENS
 // *****************************************************************************************
 
 function drawButton(btn) {
@@ -335,6 +347,7 @@ function drawLevelSelect() {
 
     for (let i = 1; i <= 50; i++) {
         const b = menuButtons['level_'+i];
+
         ctx.fillStyle = i <= currentLevel ? '#4CAF50' : '#888';
         ctx.fillRect(b.x, b.y, b.width, b.height);
 
@@ -346,7 +359,6 @@ function drawLevelSelect() {
 function drawLevelIndicator() {
     ctx.fillStyle = '#000';
     ctx.font = '20px Arial';
-    ctx.textAlign = 'left';
     ctx.fillText(`Level: ${currentLevel}`, 10, 30);
 }
 
@@ -364,12 +376,12 @@ function drawGameOverScreen() {
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
     ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
     ctx.fillText('CRASHED!', canvas.width/2, canvas.height/2 - 80);
 
     ctx.font = '24px Arial';
-    if (previousGameState === 'INFINITE')
+    if (previousGameState==='INFINITE')
         ctx.fillText(`Final Score: ${score.toFixed(0)}`, canvas.width/2, canvas.height/2 - 30);
     else
         ctx.fillText(`Level ${currentLevel} Failed`, canvas.width/2, canvas.height/2 - 30);
@@ -383,8 +395,8 @@ function drawLevelCompleteScreen() {
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
     ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
     ctx.fillText('LEVEL COMPLETE!', canvas.width/2, canvas.height/2 - 80);
 
     ctx.font = '24px Arial';
@@ -394,9 +406,8 @@ function drawLevelCompleteScreen() {
     drawButton(menuButtons.levelCompleteLevels);
 }
 
-
 // *****************************************************************************************
-//  INPUT HANDLING
+// INPUT HANDLING
 // *****************************************************************************************
 
 function handleMouseDown(e) {
@@ -405,9 +416,12 @@ function handleMouseDown(e) {
     const y = e.clientY - rect.top;
 
     if (gameState === 'MENU') {
-        if (isButtonClicked(menuButtons.levels, x,y)) gameState='LEVEL_SELECT';
-        else if (isButtonClicked(menuButtons.infinite, x,y)) {
-            score=0; resetPlayerAndObstacles(); generateObstacles(true); gameState='INFINITE';
+        if (isButtonClicked(menuButtons.levels,x,y)) gameState='LEVEL_SELECT';
+        else if (isButtonClicked(menuButtons.infinite,x,y)) {
+            score=0;
+            resetPlayerAndObstacles();
+            generateObstacles(true);
+            gameState='INFINITE';
         }
 
     } else if (gameState === 'LEVEL_SELECT') {
@@ -427,16 +441,28 @@ function handleMouseDown(e) {
 
     } else if (gameState === 'GAME_OVER') {
         if (isButtonClicked(menuButtons.gameOverMenu,x,y)) {
-            resetPlayerAndObstacles(); score=0; gameState='MENU';
+            resetPlayerAndObstacles();
+            score=0;
+            gameState='MENU';
         } else if (isButtonClicked(menuButtons.gameOverRetry,x,y)) {
             resetPlayerAndObstacles();
-            if (previousGameState==='INFINITE') { score=0; generateObstacles(true); gameState='INFINITE'; }
-            else { generateObstacles(false); gameState='LEVEL'; }
+            if (previousGameState==='INFINITE') {
+                score=0;
+                generateObstacles(true);
+                gameState='INFINITE';
+            } else {
+                generateObstacles(false);
+                gameState='LEVEL';
+            }
         }
 
     } else if (gameState === 'LEVEL_COMPLETE') {
-        if (isButtonClicked(menuButtons.levelCompleteMenu,x,y)) { gameState='MENU'; score=0; }
-        else if (isButtonClicked(menuButtons.levelCompleteLevels,x,y)) { gameState='LEVEL_SELECT'; }
+        if (isButtonClicked(menuButtons.levelCompleteMenu,x,y)) {
+            gameState='MENU';
+            score=0;
+        } else if (isButtonClicked(menuButtons.levelCompleteLevels,x,y)) {
+            gameState='LEVEL_SELECT';
+        }
     }
 }
 
