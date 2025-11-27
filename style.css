@@ -1,24 +1,27 @@
 html, body {
-    height: 100%; /* Explicitly use 100% of parent container (html for body) */
-    width: 100%; /* Explicitly use 100% of parent container */
-    margin: 0; /* Remove default browser margin */
-    padding: 0; /* Remove default browser padding */
-    overflow: hidden; /* Prevents scrollbars from appearing if the canvas slightly overruns */
+    height: 100%; 
+    width: 100%; 
+    margin: 0; 
+    padding: 0; 
+    overflow: hidden; 
 }
 
 body {
-    /* Removed centering styles (display: flex, etc.) as the container now fills the screen */
-    background-color: #333; /* Dark background */
+    background-color: #333;
     font-family: 'Inter', Arial, sans-serif;
     color: #fff;
 }
 
 #game-container {
-    /* Set dimensions explicitly to 100% of the viewport */
-    width: 100vw; 
-    height: 100vh;
+    /* * REMOVED: width: 100vw; and height: 100vh;
+     * Reason: Body is already 100% of viewport.
+     * Setting these explicitly can sometimes conflict 
+     * with the html/body 100% settings in some browsers.
+     * We revert to simple 100% of parent.
+     */
+    width: 100%; 
+    height: 100%;
     
-    /* Removed all aesthetic constraints from the original file */
     border: none; 
     border-radius: 0;
     overflow: hidden;
@@ -29,5 +32,6 @@ body {
     display: block;
     width: 100%;
     height: 100%;
-    background-color: #6a95e5; /* Sky blue background for the game */
+    /* Keep the background color */
+    background-color: #6a95e5; 
 }
