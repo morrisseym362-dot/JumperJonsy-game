@@ -275,6 +275,8 @@ function updateObstacles(deltaTime) {
     const scrollSpeed = baseSpeed + speedIncrease; 
     const distanceToScroll = scrollSpeed * deltaTime;
 
+    let levelCompleteSignal = false; // NEW: Flag to signal completion after the loop
+
     for (let i = 0; i < levelObstacles.length; i++) {
         const obs = levelObstacles[i];
         obs.x -= distanceToScroll;
@@ -292,15 +294,17 @@ function updateObstacles(deltaTime) {
 
         // Check for level completion
         if (gameState === 'LEVEL' && obs.x < -obs.width && i === levelObstacles.length - 1) {
-            // Level cleared!
-            
-            // NEW: Transition to LEVEL_COMPLETE screen
-            console.log("Level Cleared! Transitioning to LEVEL_COMPLETE"); // <-- DEBUG LINE
-            gameState = 'LEVEL_COMPLETE'; 
-            resetPlayerAndObstacles(); // Stop player movement and clear obstacles for the next run
-            currentLevel++; // Increment level for next attempt
-            return; // Exit loop after state change
+            // Level cleared! Set the flag, but don't exit the function yet.
+            levelCompleteSignal = true; // <-- CHANGED
         }
+    }
+    
+    // NEW: Handle the state transition AFTER the loop has completed
+    if (levelCompleteSignal) {
+        console.log("Level Cleared! Transitioning to LEVEL_COMPLETE");
+        gameState = 'LEVEL_COMPLETE'; 
+        resetPlayerAndObstacles();
+        currentLevel++;
     }
 }
 
