@@ -74,7 +74,7 @@ function updateMenuButtonPositions() {
     menuButtons.gameOverMenu = { x: W / 2 - btnWidth - margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Return to Menu' };
     menuButtons.gameOverRetry = { x: W / 2 + margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Retry Level' };
     
-    // NEW: Level Complete Buttons (used in LEVEL_COMPLETE state)
+    // Level Complete Buttons (used in LEVEL_COMPLETE state)
     menuButtons.levelCompleteMenu = { x: W / 2 - btnWidth - margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Return to Menu' };
     menuButtons.levelCompleteLevels = { x: W / 2 + margin/2, y: btnY, width: btnWidth, height: btnHeight, text: 'Select Level' };
     
@@ -290,15 +290,16 @@ function updateObstacles(deltaTime) {
             return;
         }
 
-        // Check for level completion (simple implementation for demonstration)
+        // Check for level completion
         if (gameState === 'LEVEL' && obs.x < -obs.width && i === levelObstacles.length - 1) {
             // Level cleared!
             
             // NEW: Transition to LEVEL_COMPLETE screen
+            console.log("Level Cleared! Transitioning to LEVEL_COMPLETE"); // <-- DEBUG LINE
             gameState = 'LEVEL_COMPLETE'; 
             resetPlayerAndObstacles(); // Stop player movement and clear obstacles for the next run
             currentLevel++; // Increment level for next attempt
-            return;
+            return; // Exit loop after state change
         }
     }
 }
@@ -466,7 +467,7 @@ function drawGameOverScreen() {
 }
 
 /**
- * NEW: Draws the Level Complete overlay and buttons.
+ * Draws the Level Complete overlay and buttons.
  */
 function drawLevelCompleteScreen() {
     // Light, transparent overlay
@@ -544,7 +545,7 @@ function handleMouseDown(event) {
                 gameState = 'LEVEL';
             }
         }
-    } else if (gameState === 'LEVEL_COMPLETE') { // NEW: Handle Level Complete screen clicks
+    } else if (gameState === 'LEVEL_COMPLETE') { 
         if (isButtonClicked(menuButtons.levelCompleteMenu, mouseX, mouseY)) {
             // Go to main menu
             gameState = 'MENU';
