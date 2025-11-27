@@ -13,9 +13,6 @@ let score = 0;
 let lastTime = 0;
 let levelObstacles = [];
 
-// --- GLOBAL GAME CONSTANTS ---
-const GROUND_HEIGHT = 30; // Increased to 30px for a more substantial floor
-
 // --- PLAYER SPRITE SETUP ---
 const playerImg = new Image();
 // IMPORTANT: Link to your uploaded image file
@@ -52,13 +49,13 @@ function resizeCanvas() {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     
-    // Set player size relative to canvas height (e.g., 15% of height)
-    player.height = canvas.height * 0.15; 
+    // Set player size relative to canvas height (e.g., 8% of height)
+    player.height = canvas.height * 0.08; 
     player.width = player.height; // Keep it square
 
     // Update player position based on new canvas size
     player.x = canvas.width * 0.05; // 5% from left
-    player.y = canvas.height - player.height - GROUND_HEIGHT; 
+    player.y = canvas.height - player.height - 10; // 10px from bottom edge
     
     updateMenuButtonPositions();
 }
@@ -146,7 +143,7 @@ function gameLoop(timestamp) {
     
     // Draw the ground
     ctx.fillStyle = '#4f3922';
-    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT); 
+    ctx.fillRect(0, canvas.height - 10, canvas.width, 10); 
 
     switch (gameState) {
         case 'MENU':
@@ -188,7 +185,7 @@ function gameLoop(timestamp) {
  */
 function resetPlayerAndObstacles() {
     player.x = canvas.width * 0.05;
-    player.y = canvas.height - player.height - GROUND_HEIGHT;
+    player.y = canvas.height - player.height - 10;
     player.velocityY = 0;
     player.isGrounded = true;
     levelObstacles = [];
@@ -205,8 +202,8 @@ function updatePlayer() {
     }
 
     // Check for ground collision
-    if (player.y + player.height > canvas.height - GROUND_HEIGHT) {
-        player.y = canvas.height - GROUND_HEIGHT - player.height;
+    if (player.y + player.height > canvas.height - 10) {
+        player.y = canvas.height - 10 - player.height;
         player.velocityY = 0;
         player.isGrounded = true;
     }
@@ -253,7 +250,7 @@ function generateObstacles(isInfinite) {
     let currentX = canvas.width * 0.6; // Start further right
     let totalLength = 0;
     
-    // Obstacle sizes scale correctly with the larger player size.
+    // Define obstacle heights relative to the responsive player size
     const baseObstacleHeight = player.height * 0.75; 
     const tallObstacleHeight = player.height * 1.5;  
     const maxObstacleWidth = player.width * 1.5;     
@@ -266,14 +263,14 @@ function generateObstacles(isInfinite) {
         currentX += gap;
 
         // Obstacle width (gets wider with difficulty, max limited by responsive size)
-        const width = Math.min(maxObstacleWidth, baseObstacleHeight / 2 + difficultyFactor * 10 + Math.random() * 20); 
+        const width = Math.min(maxObstacleWidth, baseObstacleHeight / 2 + difficultyFactor * 5 + Math.random() * 10); 
         
         // Obstacle height (gets taller with difficulty, using responsive sizes)
         const height = Math.random() < 0.2 ? tallObstacleHeight + difficultyFactor * 5 : baseObstacleHeight; // 20% chance of a tall obstacle
 
         levelObstacles.push({
             x: currentX,
-            y: canvas.height - GROUND_HEIGHT - height,
+            y: canvas.height - 10 - height,
             width: width,
             height: height
         });
